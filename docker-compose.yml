@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+    api:
+        build: .
+        container_name: ifortepay-project-test
+        ports:
+            - "8080:8080"
+        environment:
+            - DATABASE_URL=postgres://postgres:postgres@db:5432/ifortepaydb?sslmode=disable
+            - PORT=8080
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - ifortepay-network
+        restart: unless-stopped
+
+    db:
+        image: postgres:15-alpine
+        container_name: ifortepay-db
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=ifortepaydb
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./database.sql:/docker-entrypoint-initdb.d/01-init.sql
+            - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - ifortepay-network
+
+volumes:
+    postgres_data:
+
+networks:
+    ifortepay-network:
+        driver: bridge
